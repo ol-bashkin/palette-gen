@@ -8,7 +8,7 @@ import ExportModal from '@/components/ExportModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
 import ColorModelInput from '@/components/ColorModelInput.vue'
-import { IconPlus, IconUpload, IconDownload, IconSettings } from '@tabler/icons-vue'
+import { IconPlus, IconUpload, IconDownload, IconSettings, IconTrash } from '@tabler/icons-vue'
 
 const store = usePaletteStore()
 
@@ -118,6 +118,14 @@ onMounted(() => {
             >
               <IconUpload :size="15" :stroke-width="1.5" />
               <span class="nav-btn-label">Export</span>
+            </button>
+            <button
+              type="button"
+              class="nav-btn nav-btn-danger"
+              @click="store.clearPalette()"
+              aria-label="Clear palette"
+            >
+              <IconTrash :size="15" :stroke-width="1.5" />
             </button>
           </template>
           <button
@@ -315,6 +323,16 @@ onMounted(() => {
   background: rgba(255, 107, 61, 0.2);
   border-color: rgba(255, 107, 61, 0.4);
   color: var(--accent);
+}
+
+.nav-btn-danger {
+  color: var(--text-subtle);
+}
+
+.nav-btn-danger:hover {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: rgba(255, 80, 80, 0.08);
 }
 
 .nav-btn-label {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { nanoid } from '../utils/nanoid'
 import {
   type OklchColor,
@@ -19,6 +19,33 @@ export interface PaletteColor {
   baseOklch: OklchColor
   shades: Shade[]
   overrides: Record<string, OklchColor>
+}
+
+const STORAGE_KEY = 'palette-gen'
+
+type StoredColor = { id: string; name: string; baseOklch: OklchColor; overrides: Record<string, OklchColor> }
+type StoredData = { colors: StoredColor[]; settings: PaletteSettings }
+
+function persist(colors: PaletteColor[], settings: PaletteSettings) {
+  try {
+    const data: StoredData = {
+      colors: colors.map(({ id, name, baseOklch, overrides }) => ({ id, name, baseOklch, overrides })),
+      settings
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
+function loadPersisted(): StoredData | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!Array.isArray(data?.colors)) return null
+    return data as StoredData
+  } catch {
+    return null
+  }
 }
 
 const DEFAULT_SETTINGS: PaletteSettings = {
@@ -48,6 +75,25 @@ export const usePaletteStore = defineStore('palette', () => {
   const colors = ref<PaletteColor[]>([])
   const settings = ref<PaletteSettings>({ ...DEFAULT_SETTINGS })
   const initialized = ref(false)
+
+  const stored = loadPersisted()
+  if (stored?.colors.length) {
+    settings.value = { ...DEFAULT_SETTINGS, ...stored.settings }
+    colors.value = stored.colors.map((c) => {
+      const color: PaletteColor = { ...c, shades: [] }
+      color.shades = buildShades(color, settings.value)
+      return color
+    })
+    initialized.value = true
+  }
+
+  watch([colors, settings], () => {
+    if (colors.value.length > 0) {
+      persist(colors.value, settings.value)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }, { deep: true })
 
   function initRandom() {
     const oklch = randomOklch()
@@ -161,6 +207,12 @@ export const usePaletteStore = defineStore('palette', () => {
     initialized.value = true
   }
 
+  function clearPalette() {
+    colors.value = []
+    settings.value = { ...DEFAULT_SETTINGS }
+    initialized.value = false
+  }
+
   return {
     colors,
     settings,
@@ -174,6 +226,7 @@ export const usePaletteStore = defineStore('palette', () => {
     addHarmonyColors,
     updateSettings,
     reorderColors,
-    importPalette
+    importPalette,
+    clearPalette
   }
 })
