@@ -41,8 +41,8 @@ const inputRef = ref<HTMLInputElement | null>(null)
 watch(
   () => props.modelValue,
   (newVal) => {
-    if (!isFocused.value && newVal) {
-      colorInput.value = formatForModel(newVal, colorModel.value)
+    if (!isFocused.value) {
+      colorInput.value = newVal ? formatForModel(newVal, colorModel.value) : ''
       inputError.value = false
     }
   }

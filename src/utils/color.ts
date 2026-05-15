@@ -57,8 +57,7 @@ export function oklchToHex(color: OklchColor): string {
       b: Math.max(0, Math.min(1, rgb.b ?? 0))
     }
     return formatHex(clamped) ?? '#000000'
-  } catch (err) {
-    console.error('oklchToHex conversion failed:', err)
+  } catch {
     return '#000000'
   }
 }
