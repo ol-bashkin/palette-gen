@@ -240,12 +240,26 @@ const hGradient = computed(() => buildHGradient(local.value.l, local.value.c))
   flex-direction: column;
   gap: 16px;
   width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   animation: scaleIn 0.25s var(--ease-spring) both;
   box-shadow:
     0 0 0 2px var(--surface-raised),
     0 0 0 3px var(--border),
     0 32px 80px rgba(0, 0, 0, 0.6),
     0 0 0 4px rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 480px) {
+  .modal-backdrop {
+    align-items: flex-end;
+  }
+  .modal-inner {
+    width: 100%;
+    max-height: 90dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
 }
 
 .modal-header {

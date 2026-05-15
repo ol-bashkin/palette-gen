@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { usePaletteStore } from '@/stores/palette'
-import { parseToOklch, randomOklch, oklchToCss, oklchToHex, type OklchColor } from '@/utils/color'
+import { randomOklch, oklchToCss, oklchToHex, type OklchColor } from '@/utils/color'
 import PaletteRow from '@/components/PaletteRow.vue'
 import AddColorModal from '@/components/AddColorModal.vue'
 import ExportModal from '@/components/ExportModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
-import { IconPlus, IconUpload, IconDownload, IconSettings, IconRefresh } from '@tabler/icons-vue'
+import ColorModelInput from '@/components/ColorModelInput.vue'
+import { IconPlus, IconUpload, IconDownload, IconSettings } from '@tabler/icons-vue'
 
 const store = usePaletteStore()
 
@@ -19,7 +20,7 @@ const showSettings = ref(false)
 const addModalTrigger = ref<HTMLElement | null>(null)
 const exportTrigger = ref<HTMLElement | null>(null)
 const importTrigger = ref<HTMLElement | null>(null)
-const welcomeInputRef = ref<HTMLInputElement | null>(null)
+const colorModelInputRef = ref<{ focus: () => void } | null>(null)
 
 function openAddModal() {
   addModalTrigger.value = document.activeElement as HTMLElement
@@ -52,42 +53,22 @@ function closeImport() {
 }
 
 // Welcome state
-const welcomeColor = ref<OklchColor>(randomOklch())
-const welcomeInput = ref(oklchToHex(welcomeColor.value))
+const welcomeColor = ref<OklchColor | null>(randomOklch())
 const welcomeName = ref('base')
-const welcomeError = ref(false)
-const welcomeBg = ref(oklchToCss(welcomeColor.value))
-
-function onWelcomeInput(e: Event) {
-  const val = (e.target as HTMLInputElement).value
-  welcomeInput.value = val
-  const oklch = parseToOklch(val)
-  if (oklch) {
-    welcomeColor.value = oklch
-    welcomeBg.value = oklchToCss(oklch)
-    welcomeError.value = false
-  } else {
-    welcomeError.value = val.length > 3
-  }
-}
-
-function randomizeWelcome() {
-  welcomeColor.value = randomOklch()
-  welcomeInput.value = oklchToHex(welcomeColor.value)
-  welcomeBg.value = oklchToCss(welcomeColor.value)
-  welcomeError.value = false
-}
+const welcomeBg = computed(() =>
+  welcomeColor.value ? oklchToCss(welcomeColor.value) : 'var(--surface-raised)'
+)
 
 function startPalette() {
-  const oklch = parseToOklch(welcomeInput.value) ?? welcomeColor.value
+  if (!welcomeColor.value) return
   const name = welcomeName.value.trim() || 'base'
-  store.addColor(name, oklch)
+  store.addColor(name, welcomeColor.value)
   store.initialized = true
 }
 
 onMounted(() => {
   if (!store.initialized) {
-    welcomeInputRef.value?.focus()
+    colorModelInputRef.value?.focus()
   }
 })
 
@@ -173,33 +154,14 @@ onMounted(() => {
           :style="{ background: welcomeBg }"
         >
           <div class="welcome-overlay">
-            <span class="welcome-hex mono">{{ welcomeInput }}</span>
+            <span class="welcome-hex mono">{{ welcomeColor ? oklchToHex(welcomeColor) : '' }}</span>
           </div>
         </div>
 
         <div class="welcome-form fade-up" style="animation-delay: 120ms">
           <div class="welcome-field">
             <label class="welcome-label">Base color</label>
-            <div class="welcome-input-row">
-              <input
-                ref="welcomeInputRef"
-                class="welcome-input mono"
-                :class="{ error: welcomeError }"
-                :value="welcomeInput"
-                @input="onWelcomeInput"
-                placeholder="#hex, oklch(...), rgb(...)"
-                spellcheck="false"
-                aria-label="Base color value"
-              />
-              <button
-                type="button"
-                class="welcome-random-btn"
-                @click="randomizeWelcome"
-                aria-label="Pick random color"
-              >
-                <IconRefresh :size="15" :stroke-width="1.5" />
-              </button>
-            </div>
+            <ColorModelInput ref="colorModelInputRef" v-model="welcomeColor" :show-randomize="true" />
           </div>
 
           <div class="welcome-field">
@@ -217,7 +179,7 @@ onMounted(() => {
             type="button"
             class="welcome-start-btn"
             @click="startPalette"
-            :disabled="welcomeError"
+            :disabled="!welcomeColor"
           >
             Generate palette
             <span class="welcome-arrow">
@@ -459,11 +421,6 @@ onMounted(() => {
   letter-spacing: 0.04em;
 }
 
-.welcome-input-row {
-  position: relative;
-  display: flex;
-}
-
 .welcome-input {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -475,38 +432,8 @@ onMounted(() => {
   transition: border-color 0.15s ease;
 }
 
-.welcome-input-row .welcome-input {
-  padding-right: 48px;
-}
-
 .welcome-input:focus {
   border-color: var(--border-strong);
-}
-
-.welcome-input.error {
-  border-color: var(--danger-border);
-}
-
-.welcome-random-btn {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  border-radius: 7px;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease;
-}
-
-.welcome-random-btn:hover {
-  background: var(--surface-raised);
-  color: var(--text);
 }
 
 .welcome-start-btn {
