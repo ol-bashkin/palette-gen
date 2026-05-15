@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { usePaletteStore } from '@/stores/palette'
 import { parseToOklch, randomOklch, oklchToCss, oklchToHex, type OklchColor } from '@/utils/color'
 import PaletteRow from '@/components/PaletteRow.vue'
@@ -48,9 +48,6 @@ function startPalette() {
   store.initialized = true
 }
 
-onMounted(() => {
-  // nothing — welcome screen handles init
-})
 </script>
 
 <template>

@@ -53,7 +53,8 @@ export function oklchToHex(color: OklchColor): string {
       b: Math.max(0, Math.min(1, rgb.b ?? 0))
     }
     return formatHex(clamped) ?? '#000000'
-  } catch {
+  } catch (err) {
+    console.error('oklchToHex conversion failed:', err)
     return '#000000'
   }
 }
@@ -173,7 +174,10 @@ export function relativeLuminance(hex: string): number {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
 }
 
+// Empirically chosen threshold that gives good contrast without strict WCAG 4.5:1 target
+const CONTRAST_THRESHOLD = 0.35
+
 export function contrastColor(hex: string): string {
   const lum = relativeLuminance(hex)
-  return lum > 0.35 ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)'
+  return lum > CONTRAST_THRESHOLD ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)'
 }

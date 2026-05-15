@@ -14,7 +14,9 @@
       "Bash(echo \"exit: $?\")",
       "Bash(npx prettier *)",
       "Bash(npm test *)",
-      "Bash(npx pwa-assets-generator *)"
+      "Bash(npx pwa-assets-generator *)",
+      "Bash(npx tsc *)",
+      "Bash(npm rm *)"
     ]
   }
 }

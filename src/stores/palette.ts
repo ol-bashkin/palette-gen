@@ -49,13 +49,6 @@ export const usePaletteStore = defineStore('palette', () => {
   const settings = ref<PaletteSettings>({ ...DEFAULT_SETTINGS })
   const initialized = ref(false)
 
-  const allShades = computed(() =>
-    colors.value.map((c) => ({
-      ...c,
-      shades: buildShades(c, settings.value)
-    }))
-  )
-
   function initRandom() {
     const oklch = randomOklch()
     const id = nanoid()
@@ -140,7 +133,6 @@ export const usePaletteStore = defineStore('palette', () => {
     colors,
     settings,
     initialized,
-    allShades,
     initRandom,
     addColor,
     updateBaseColor,

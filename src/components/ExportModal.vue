@@ -10,6 +10,7 @@ const emit = defineEmits<{ close: [] }>()
 
 const tab = ref<'css' | 'figma'>('css')
 const copied = ref(false)
+const copyFailed = ref(false)
 const dialogRef = ref<HTMLElement | null>(null)
 
 useFocusTrap(dialogRef)
@@ -19,11 +20,15 @@ const figmaOutput = computed(() => exportFigmaTokens(store.colors))
 const activeOutput = computed(() => (tab.value === 'css' ? cssOutput.value : figmaOutput.value))
 
 async function copy() {
-  await navigator.clipboard.writeText(activeOutput.value)
-  copied.value = true
-  setTimeout(() => {
-    copied.value = false
-  }, 1800)
+  try {
+    await navigator.clipboard.writeText(activeOutput.value)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 1800)
+  } catch (err) {
+    console.error('Clipboard write failed:', err)
+    copyFailed.value = true
+    setTimeout(() => { copyFailed.value = false }, 2000)
+  }
 }
 
 function download() {
@@ -88,9 +93,14 @@ function onBackdrop(e: MouseEvent) {
         <pre class="code-inner mono">{{ activeOutput }}</pre>
 
         <div class="export-actions">
-          <button type="button" class="btn-ghost" @click="copy" aria-label="Copy to clipboard">
+          <button
+            type="button"
+            :class="['btn-ghost', { 'btn-ghost-error': copyFailed }]"
+            @click="copy"
+            aria-label="Copy to clipboard"
+          >
             <component :is="copied ? IconCheck : IconCopy" :size="14" :stroke-width="1.5" />
-            <span aria-live="polite">{{ copied ? 'Copied!' : 'Copy' }}</span>
+            <span aria-live="polite">{{ copied ? 'Copied!' : copyFailed ? 'Failed' : 'Copy' }}</span>
           </button>
           <button type="button" class="btn-primary" @click="download">
             <IconDownload :size="14" :stroke-width="1.5" />
@@ -231,6 +241,11 @@ function onBackdrop(e: MouseEvent) {
   color: var(--text);
   border-color: var(--border-strong);
   background: var(--surface-raised);
+}
+
+.btn-ghost-error {
+  color: var(--danger);
+  border-color: var(--danger-border);
 }
 
 .btn-primary {

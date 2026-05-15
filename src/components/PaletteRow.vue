@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import type { PaletteColor } from '@/stores/palette'
 import type { OklchColor, Shade } from '@/utils/color'
-import { oklchToCss, oklchToHex, generateShades } from '@/utils/color'
+import { oklchToCss } from '@/utils/color'
 import { usePaletteStore } from '@/stores/palette'
 import SwatchCard from './SwatchCard.vue'
 import ColorPickerModal from './ColorPickerModal.vue'
@@ -20,26 +20,9 @@ const activeSuffix = ref<string | null>(null)
 const renaming = ref(false)
 const nameInput = ref(props.color.name)
 
-const shades = computed(() => {
-  return generateShades(props.color.baseOklch, store.settings).map((shade) => {
-    const override = props.color.overrides[shade.suffix]
-    if (override) {
-      return {
-        ...shade,
-        oklch: override,
-        hex: oklchToHex(override),
-        css: oklchToCss(override),
-        isCustom: true,
-        customOklch: override
-      }
-    }
-    return shade
-  })
-})
-
 const activeShade = computed<Shade | null>(() => {
   if (!activeSuffix.value) return null
-  return shades.value.find((s) => s.suffix === activeSuffix.value) ?? null
+  return props.color.shades.find((s) => s.suffix === activeSuffix.value) ?? null
 })
 
 const hasOverride = computed(() => {
@@ -149,7 +132,7 @@ const headerBg = computed(() => oklchToCss(props.color.baseOklch))
     <!-- Swatches -->
     <div class="swatches-inner">
       <SwatchCard
-        v-for="shade in shades"
+        v-for="shade in color.shades"
         :key="shade.suffix"
         :shade="shade"
         :color-name="color.name"

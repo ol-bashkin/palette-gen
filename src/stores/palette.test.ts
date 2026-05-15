@@ -245,24 +245,24 @@ describe('updateSettings', () => {
   })
 })
 
-// ─── allShades computed ───────────────────────────────────────────────────────
+// ─── color shades ─────────────────────────────────────────────────────────────
 
-describe('allShades', () => {
-  it('mirrors colors with rebuilt shades', () => {
+describe('color shades', () => {
+  it('populates shades on addColor', () => {
     const store = usePaletteStore()
     store.addColor('primary', RED)
-    expect(store.allShades).toHaveLength(1)
-    expect(store.allShades[0].name).toBe('primary')
-    expect(store.allShades[0].shades.length).toBeGreaterThan(0)
+    expect(store.colors).toHaveLength(1)
+    expect(store.colors[0].name).toBe('primary')
+    expect(store.colors[0].shades.length).toBeGreaterThan(0)
   })
 
-  it('reflects override in allShades', () => {
+  it('reflects override in color.shades', () => {
     const store = usePaletteStore()
     store.addColor('primary', RED)
     const { id, shades } = store.colors[0]
     const target = shades[0]
     store.setShadeOverride(id, target.suffix, BLUE)
-    const overridden = store.allShades[0].shades.find((s) => s.suffix === target.suffix)!
+    const overridden = store.colors[0].shades.find((s) => s.suffix === target.suffix)!
     expect(overridden.isCustom).toBe(true)
     expect(overridden.oklch).toEqual(BLUE)
   })

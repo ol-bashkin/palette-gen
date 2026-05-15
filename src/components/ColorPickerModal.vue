@@ -127,7 +127,7 @@ const cGradient = computed(
   () =>
     `linear-gradient(to right, oklch(${(local.value.l * 100).toFixed(1)}% 0 ${(local.value.h ?? 0).toFixed(1)}), oklch(${(local.value.l * 100).toFixed(1)}% 0.4 ${(local.value.h ?? 0).toFixed(1)}))`
 )
-const hGradient = computed(() => buildHGradient(local.value.l, local.value.c, 24))
+const hGradient = computed(() => buildHGradient(local.value.l, local.value.c))
 </script>
 
 <template>
