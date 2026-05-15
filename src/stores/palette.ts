@@ -129,6 +129,38 @@ export const usePaletteStore = defineStore('palette', () => {
     colors.value = arr
   }
 
+  function importPalette(
+    items: Array<{ name: string; baseOklch: OklchColor; overrides: Record<string, OklchColor> }>
+  ) {
+    colors.value = items.map((item) => {
+      const id = nanoid()
+      const color: PaletteColor = {
+        id,
+        name: item.name,
+        baseOklch: item.baseOklch,
+        shades: [],
+        overrides: {}
+      }
+
+      // Build a CSS-string map of what the generator would produce for this base color.
+      // Compare at oklchToCss precision — same level as the export format — so
+      // round-tripped values match exactly and only genuine overrides are preserved.
+      const generatedCss = new Map(
+        generateShades(color.baseOklch, settings.value).map((s) => [s.suffix, oklchToCss(s.oklch)])
+      )
+
+      for (const [suffix, oklch] of Object.entries(item.overrides)) {
+        if (generatedCss.get(suffix) !== oklchToCss(oklch)) {
+          color.overrides[suffix] = oklch
+        }
+      }
+
+      color.shades = buildShades(color, settings.value)
+      return color
+    })
+    initialized.value = true
+  }
+
   return {
     colors,
     settings,
@@ -141,6 +173,7 @@ export const usePaletteStore = defineStore('palette', () => {
     removeColor,
     addHarmonyColors,
     updateSettings,
-    reorderColors
+    reorderColors,
+    importPalette
   }
 })

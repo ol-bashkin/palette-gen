@@ -5,17 +5,20 @@ import { parseToOklch, randomOklch, oklchToCss, oklchToHex, type OklchColor } fr
 import PaletteRow from '@/components/PaletteRow.vue'
 import AddColorModal from '@/components/AddColorModal.vue'
 import ExportModal from '@/components/ExportModal.vue'
+import ImportModal from '@/components/ImportModal.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
-import { IconPlus, IconUpload, IconSettings, IconRefresh } from '@tabler/icons-vue'
+import { IconPlus, IconUpload, IconDownload, IconSettings, IconRefresh } from '@tabler/icons-vue'
 
 const store = usePaletteStore()
 
 const showAddModal = ref(false)
 const showExport = ref(false)
+const showImport = ref(false)
 const showSettings = ref(false)
 
 const addModalTrigger = ref<HTMLElement | null>(null)
 const exportTrigger = ref<HTMLElement | null>(null)
+const importTrigger = ref<HTMLElement | null>(null)
 const welcomeInputRef = ref<HTMLInputElement | null>(null)
 
 function openAddModal() {
@@ -36,6 +39,16 @@ function openExport() {
 function closeExport() {
   showExport.value = false
   nextTick(() => exportTrigger.value?.focus())
+}
+
+function openImport() {
+  importTrigger.value = document.activeElement as HTMLElement
+  showImport.value = true
+}
+
+function closeImport() {
+  showImport.value = false
+  nextTick(() => importTrigger.value?.focus())
 }
 
 // Welcome state
@@ -109,6 +122,15 @@ onMounted(() => {
             </button>
             <button
               type="button"
+              class="nav-btn"
+              @click="openImport"
+              aria-label="Import palette"
+            >
+              <IconDownload :size="15" :stroke-width="1.5" />
+              <span class="nav-btn-label">Import</span>
+            </button>
+            <button
+              type="button"
               class="nav-btn nav-btn-primary"
               @click="openExport"
               aria-label="Export palette"
@@ -117,6 +139,16 @@ onMounted(() => {
               <span class="nav-btn-label">Export</span>
             </button>
           </template>
+          <button
+            v-else
+            type="button"
+            class="nav-btn"
+            @click="openImport"
+            aria-label="Import palette"
+          >
+            <IconDownload :size="15" :stroke-width="1.5" />
+            <span class="nav-btn-label">Import</span>
+          </button>
         </div>
       </nav>
     </header>
@@ -231,6 +263,7 @@ onMounted(() => {
     <!-- ── MODALS ── -->
     <AddColorModal v-if="showAddModal" @close="closeAddModal" />
     <ExportModal v-if="showExport" @close="closeExport" />
+    <ImportModal v-if="showImport" @close="closeImport" />
   </div>
 </template>
 
