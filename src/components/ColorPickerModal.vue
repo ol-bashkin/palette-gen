@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { OklchColor } from '@/utils/color'
-import { oklchToHex, oklchToCss, parseToOklch, buildHGradient } from '@/utils/color'
+import { oklchToHex, oklchToCss, buildHGradient } from '@/utils/color'
 import { useFocusTrap } from '@/composables/useFocusTrap'
 import { IconX, IconRefresh } from '@tabler/icons-vue'
+import ColorModelInput from '@/components/ColorModelInput.vue'
 
 const props = defineProps<{
   modelValue: OklchColor
@@ -20,15 +21,12 @@ const emit = defineEmits<{
 }>()
 
 const local = ref<OklchColor>({ ...props.modelValue })
-const hexInput = ref(oklchToHex(props.modelValue))
-const hexError = ref(false)
 const isDirty = ref(false)
 
 watch(
   () => props.modelValue,
   (v) => {
     local.value = { ...v }
-    hexInput.value = oklchToHex(v)
     isDirty.value = false
   }
 )
@@ -40,8 +38,7 @@ const lPercent = computed({
   get: () => Math.round(local.value.l * 1000) / 10,
   set: (v: number) => {
     local.value = { ...local.value, l: v / 100 }
-    syncHex()
-    markDirty()
+    isDirty.value = true
   }
 })
 
@@ -49,8 +46,7 @@ const cVal = computed({
   get: () => Math.round(local.value.c * 10000) / 10000,
   set: (v: number) => {
     local.value = { ...local.value, c: v }
-    syncHex()
-    markDirty()
+    isDirty.value = true
   }
 })
 
@@ -58,28 +54,14 @@ const hVal = computed({
   get: () => Math.round((local.value.h ?? 0) * 100) / 100,
   set: (v: number) => {
     local.value = { ...local.value, h: v }
-    syncHex()
-    markDirty()
+    isDirty.value = true
   }
 })
 
-function syncHex() {
-  hexInput.value = oklchToHex(local.value)
-}
-
-function markDirty() {
-  isDirty.value = true
-}
-
-function onHexInput(val: string) {
-  hexInput.value = val
-  const oklch = parseToOklch(val)
+function onColorFromText(oklch: OklchColor | null) {
   if (oklch) {
     local.value = oklch
-    hexError.value = false
-    markDirty()
-  } else {
-    hexError.value = val.length > 4
+    isDirty.value = true
   }
 }
 
@@ -102,7 +84,7 @@ function onBackdropClick(e: MouseEvent) {
   }
 }
 
-const hexInputRef = ref<HTMLInputElement | null>(null)
+const colorInputRef = ref<{ focus: () => void; select: () => void } | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 
 useFocusTrap(dialogRef)
@@ -112,8 +94,8 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  hexInputRef.value?.focus()
-  hexInputRef.value?.select()
+  colorInputRef.value?.focus()
+  colorInputRef.value?.select()
   document.addEventListener('keydown', onKeydown)
 })
 
@@ -146,7 +128,7 @@ const hGradient = computed(() => buildHGradient(local.value.l, local.value.c))
           <span id="picker-title" class="modal-title">
             <span class="mono">{{ shadeName }}</span>
           </span>
-          <button type="button" class="btn-icon" @click="apply" aria-label="Close color picker">
+          <button type="button" class="btn-icon" aria-label="Close color picker" @click="apply">
             <IconX :size="16" :stroke-width="1.5" />
           </button>
         </div>
@@ -210,23 +192,12 @@ const hGradient = computed(() => buildHGradient(local.value.l, local.value.c))
           </div>
         </div>
 
-        <!-- Hex input -->
-        <div class="hex-row">
-          <div class="hex-input-wrap" :class="{ error: hexError }">
-            <span class="hex-prefix mono">#</span>
-            <input
-              ref="hexInputRef"
-              class="hex-input mono"
-              :value="hexInput.replace('#', '')"
-              @input="(e) => onHexInput('#' + (e.target as HTMLInputElement).value)"
-              placeholder="000000"
-              maxlength="6"
-              spellcheck="false"
-              aria-label="Hex color value"
-            />
-          </div>
-          <span class="oklch-display mono">{{ oklchToCss(local) }}</span>
-        </div>
+        <!-- Color input -->
+        <ColorModelInput
+          ref="colorInputRef"
+          :model-value="local"
+          @update:model-value="onColorFromText"
+        />
 
         <!-- Footer -->
         <div class="modal-footer">
@@ -374,56 +345,6 @@ const hGradient = computed(() => buildHGradient(local.value.l, local.value.c))
   font-size: 11px;
   color: var(--text-muted);
   text-align: right;
-}
-
-.hex-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hex-input-wrap {
-  display: flex;
-  align-items: center;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0 10px;
-  height: 34px;
-  gap: 2px;
-  transition: border-color 0.15s ease;
-  flex-shrink: 0;
-}
-
-.hex-input-wrap:focus-within {
-  border-color: var(--border-strong);
-}
-
-.hex-input-wrap.error {
-  border-color: rgba(255, 80, 80, 0.5);
-}
-
-.hex-prefix {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.hex-input {
-  background: none;
-  border: none;
-  font-size: 12px;
-  color: var(--text);
-  width: 70px;
-  letter-spacing: 0.04em;
-}
-
-.oklch-display {
-  font-size: 10px;
-  color: var(--text-subtle);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
 }
 
 .modal-footer {

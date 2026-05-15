@@ -1,5 +1,7 @@
 import { converter, formatHex, parse } from 'culori'
 
+export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsb' | 'css'
+
 export interface OklchColor {
   l: number
   c: number
@@ -24,6 +26,8 @@ export interface PaletteSettings {
 
 const toOklch = converter('oklch')
 const toRgb = converter('rgb')
+const toHsl = converter('hsl')
+const toHsv = converter('hsv')
 
 export function parseToOklch(input: string): OklchColor | null {
   try {
@@ -64,6 +68,58 @@ export function oklchToCss(c: OklchColor): string {
   const ch = c.c.toFixed(4)
   const h = (c.h ?? 0).toFixed(2)
   return `oklch(${l}% ${ch} ${h})`
+}
+
+function oklchToRgbString(color: OklchColor): string {
+  const rgb = toRgb({ mode: 'oklch', ...color })
+  if (!rgb) return 'rgb(0, 0, 0)'
+  const r = Math.round(Math.max(0, Math.min(1, rgb.r ?? 0)) * 255)
+  const g = Math.round(Math.max(0, Math.min(1, rgb.g ?? 0)) * 255)
+  const b = Math.round(Math.max(0, Math.min(1, rgb.b ?? 0)) * 255)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function oklchToHslString(color: OklchColor): string {
+  const hsl = toHsl({ mode: 'oklch', ...color })
+  if (!hsl) return 'hsl(0, 0%, 0%)'
+  const h = Math.round(hsl.h ?? 0)
+  const s = Math.round((hsl.s ?? 0) * 100)
+  const l = Math.round((hsl.l ?? 0) * 100)
+  return `hsl(${h}, ${s}%, ${l}%)`
+}
+
+function oklchToHsbString(color: OklchColor): string {
+  const hsv = toHsv({ mode: 'oklch', ...color })
+  if (!hsv) return 'hsb(0, 0%, 0%)'
+  const h = Math.round(hsv.h ?? 0)
+  const s = Math.round((hsv.s ?? 0) * 100)
+  const b = Math.round((hsv.v ?? 0) * 100)
+  return `hsb(${h}, ${s}%, ${b}%)`
+}
+
+function parseHsbString(input: string): OklchColor | null {
+  const m = input
+    .trim()
+    .match(/^hsb\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)%\s*,\s*(\d+(?:\.\d+)?)%\s*\)$/i)
+  if (!m) return null
+  const ok = toOklch({ mode: 'hsv', h: +m[1], s: +m[2] / 100, v: +m[3] / 100 })
+  if (!ok || ok.l === undefined) return null
+  return { l: ok.l, c: ok.c ?? 0, h: ok.h ?? 0 }
+}
+
+export function formatForModel(color: OklchColor, model: ColorModel): string {
+  switch (model) {
+    case 'hex': return oklchToHex(color)
+    case 'rgb': return oklchToRgbString(color)
+    case 'hsl': return oklchToHslString(color)
+    case 'hsb': return oklchToHsbString(color)
+    case 'css': return oklchToCss(color)
+  }
+}
+
+export function parseForModel(input: string, model: ColorModel): OklchColor | null {
+  if (model === 'hsb') return parseHsbString(input)
+  return parseToOklch(input)
 }
 
 export function suffixFromLightness(l: number): string {

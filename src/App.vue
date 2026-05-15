@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { usePaletteStore } from '@/stores/palette'
 import { parseToOklch, randomOklch, oklchToCss, oklchToHex, type OklchColor } from '@/utils/color'
 import PaletteRow from '@/components/PaletteRow.vue'
@@ -13,6 +13,30 @@ const store = usePaletteStore()
 const showAddModal = ref(false)
 const showExport = ref(false)
 const showSettings = ref(false)
+
+const addModalTrigger = ref<HTMLElement | null>(null)
+const exportTrigger = ref<HTMLElement | null>(null)
+const welcomeInputRef = ref<HTMLInputElement | null>(null)
+
+function openAddModal() {
+  addModalTrigger.value = document.activeElement as HTMLElement
+  showAddModal.value = true
+}
+
+function closeAddModal() {
+  showAddModal.value = false
+  nextTick(() => addModalTrigger.value?.focus())
+}
+
+function openExport() {
+  exportTrigger.value = document.activeElement as HTMLElement
+  showExport.value = true
+}
+
+function closeExport() {
+  showExport.value = false
+  nextTick(() => exportTrigger.value?.focus())
+}
 
 // Welcome state
 const welcomeColor = ref<OklchColor>(randomOklch())
@@ -48,6 +72,12 @@ function startPalette() {
   store.initialized = true
 }
 
+onMounted(() => {
+  if (!store.initialized) {
+    welcomeInputRef.value?.focus()
+  }
+})
+
 </script>
 
 <template>
@@ -56,10 +86,11 @@ function startPalette() {
     <header class="nav-shell">
       <nav class="nav-inner">
         <div class="nav-logo">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="0.5" y="0.5" width="6" height="17" rx="2" fill="var(--accent)" />
-            <rect x="8.5" y="0.5" width="6" height="10" rx="2" fill="#3de8ff" opacity="0.8" />
-            <rect x="8.5" y="13" width="6" height="4.5" rx="2" fill="#b8ff3d" opacity="0.8" />
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.5 0H4.5C2.01472 0 0 2.01472 0 4.5V13.5C0 15.9853 2.01472 18 4.5 18H13.5C15.9853 18 18 15.9853 18 13.5V4.5C18 2.01472 15.9853 0 13.5 0Z" fill="#0A0A0E"/>
+            <path d="M6.1875 2.25H3.9375C3.00552 2.25 2.25 3.00552 2.25 3.9375V14.0625C2.25 14.9945 3.00552 15.75 3.9375 15.75H6.1875C7.11948 15.75 7.875 14.9945 7.875 14.0625V3.9375C7.875 3.00552 7.11948 2.25 6.1875 2.25Z" fill="#FF6B3D"/>
+            <path d="M14.0625 2.25H11.8125C10.8805 2.25 10.125 3.00552 10.125 3.9375V8.4375C10.125 9.36948 10.8805 10.125 11.8125 10.125H14.0625C14.9945 10.125 15.75 9.36948 15.75 8.4375V3.9375C15.75 3.00552 14.9945 2.25 14.0625 2.25Z" fill="#3DE8FF"/>
+            <path d="M14.0625 12.375H11.8125C10.8805 12.375 10.125 13.1305 10.125 14.0625C10.125 14.9945 10.8805 15.75 11.8125 15.75H14.0625C14.9945 15.75 15.75 14.9945 15.75 14.0625C15.75 13.1305 14.9945 12.375 14.0625 12.375Z" fill="#B8FF3D"/>
           </svg>
           <span class="nav-wordmark">palette<span class="nav-dot">.gen</span></span>
         </div>
@@ -79,7 +110,7 @@ function startPalette() {
             <button
               type="button"
               class="nav-btn nav-btn-primary"
-              @click="showExport = true"
+              @click="openExport"
               aria-label="Export palette"
             >
               <IconUpload :size="15" :stroke-width="1.5" />
@@ -119,12 +150,14 @@ function startPalette() {
             <label class="welcome-label">Base color</label>
             <div class="welcome-input-row">
               <input
+                ref="welcomeInputRef"
                 class="welcome-input mono"
                 :class="{ error: welcomeError }"
                 :value="welcomeInput"
                 @input="onWelcomeInput"
                 placeholder="#hex, oklch(...), rgb(...)"
                 spellcheck="false"
+                aria-label="Base color value"
               />
               <button
                 type="button"
@@ -187,7 +220,7 @@ function startPalette() {
         </div>
 
         <div class="editor-footer fade-up" style="animation-delay: 100ms">
-          <button type="button" class="add-color-btn" @click="showAddModal = true">
+          <button type="button" class="add-color-btn" @click="openAddModal">
             <IconPlus :size="15" :stroke-width="2" />
             Add color
           </button>
@@ -196,8 +229,8 @@ function startPalette() {
     </Transition>
 
     <!-- ── MODALS ── -->
-    <AddColorModal v-if="showAddModal" @close="showAddModal = false" />
-    <ExportModal v-if="showExport" @close="showExport = false" />
+    <AddColorModal v-if="showAddModal" @close="closeAddModal" />
+    <ExportModal v-if="showExport" @close="closeExport" />
   </div>
 </template>
 
@@ -305,6 +338,12 @@ function startPalette() {
   display: flex;
   justify-content: center;
   overflow-x: auto;
+}
+
+@media (max-width: 600px) {
+  .settings-bar {
+    overflow-x: hidden;
+  }
 }
 
 .slide-down-enter-active,
@@ -533,6 +572,10 @@ function startPalette() {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-dim);
+}
+
+.add-color-btn:active {
+  transform: scale(0.97);
 }
 
 /* Transitions */

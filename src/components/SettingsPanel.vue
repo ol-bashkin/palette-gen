@@ -146,4 +146,35 @@ const maxCount = computed(() => {
 .mono {
   font-family: 'JetBrains Mono', monospace;
 }
+
+@media (max-width: 600px) {
+  .settings-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    gap: 8px 16px;
+    width: 100%;
+  }
+
+  .settings-title {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .settings-num {
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
 </style>

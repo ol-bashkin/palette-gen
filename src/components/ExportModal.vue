@@ -11,6 +11,7 @@ const emit = defineEmits<{ close: [] }>()
 const tab = ref<'css' | 'figma'>('css')
 const copied = ref(false)
 const copyFailed = ref(false)
+const copying = ref(false)
 const dialogRef = ref<HTMLElement | null>(null)
 
 useFocusTrap(dialogRef)
@@ -20,14 +21,17 @@ const figmaOutput = computed(() => exportFigmaTokens(store.colors))
 const activeOutput = computed(() => (tab.value === 'css' ? cssOutput.value : figmaOutput.value))
 
 async function copy() {
+  if (copying.value || copied.value) return
+  copying.value = true
   try {
     await navigator.clipboard.writeText(activeOutput.value)
     copied.value = true
     setTimeout(() => { copied.value = false }, 1800)
-  } catch (err) {
-    console.error('Clipboard write failed:', err)
+  } catch {
     copyFailed.value = true
     setTimeout(() => { copyFailed.value = false }, 2000)
+  } finally {
+    copying.value = false
   }
 }
 
@@ -90,13 +94,18 @@ function onBackdrop(e: MouseEvent) {
           </button>
         </div>
 
-        <pre class="code-inner mono">{{ activeOutput }}</pre>
+        <pre
+          class="code-inner mono"
+          tabindex="0"
+          aria-label="Export code preview"
+        >{{ activeOutput }}</pre>
 
         <div class="export-actions">
           <button
             type="button"
             :class="['btn-ghost', { 'btn-ghost-error': copyFailed }]"
             @click="copy"
+            :disabled="copying || copied"
             aria-label="Copy to clipboard"
           >
             <component :is="copied ? IconCheck : IconCopy" :size="14" :stroke-width="1.5" />
@@ -199,13 +208,18 @@ function onBackdrop(e: MouseEvent) {
   color: var(--text);
 }
 
+.tab:hover:not(.active) {
+  background: var(--surface-high);
+  color: var(--text);
+}
+
 .code-inner {
   background: rgba(0, 0, 0, 0.35);
   border-radius: var(--radius-md);
   padding: 14px;
   font-size: 11px;
   color: var(--text-muted);
-  max-height: 320px;
+  max-height: min(320px, 45vh);
   overflow-y: auto;
   white-space: pre;
   line-height: 1.65;
@@ -246,6 +260,11 @@ function onBackdrop(e: MouseEvent) {
 .btn-ghost-error {
   color: var(--danger);
   border-color: var(--danger-border);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-primary {

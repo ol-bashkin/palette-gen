@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import type { PaletteColor } from '@/stores/palette'
 import type { OklchColor, Shade } from '@/utils/color'
 import { oklchToCss } from '@/utils/color'
 import { usePaletteStore } from '@/stores/palette'
 import SwatchCard from './SwatchCard.vue'
 import ColorPickerModal from './ColorPickerModal.vue'
-import { IconTrash, IconEdit } from '@tabler/icons-vue'
+import { IconTrash, IconEdit, IconCheck, IconX } from '@tabler/icons-vue'
 
 const props = defineProps<{
   color: PaletteColor
@@ -72,6 +72,28 @@ function commitRename() {
 }
 
 const headerBg = computed(() => oklchToCss(props.color.baseOklch))
+
+const deleteConfirm = ref(false)
+let deleteTimer: ReturnType<typeof setTimeout> | null = null
+
+function requestDelete() {
+  deleteConfirm.value = true
+  deleteTimer = setTimeout(() => { deleteConfirm.value = false }, 3000)
+}
+
+function cancelDelete() {
+  deleteConfirm.value = false
+  if (deleteTimer) clearTimeout(deleteTimer)
+}
+
+function confirmDelete() {
+  if (deleteTimer) clearTimeout(deleteTimer)
+  store.removeColor(props.color.id)
+}
+
+onBeforeUnmount(() => {
+  if (deleteTimer) clearTimeout(deleteTimer)
+})
 </script>
 
 <template>
@@ -109,36 +131,66 @@ const headerBg = computed(() => oklchToCss(props.color.baseOklch))
       </template>
 
       <div class="row-actions">
-        <button
-          type="button"
-          class="row-action-btn"
-          @click="openBaseEditor"
-          :aria-label="`Edit base color for ${color.name}`"
-        >
-          <IconEdit :size="14" :stroke-width="1.5" />
-        </button>
-        <button
-          v-if="!isFirst || store.colors.length > 1"
-          type="button"
-          class="row-action-btn row-action-danger"
-          @click="store.removeColor(color.id)"
-          :aria-label="`Remove ${color.name} color`"
-        >
-          <IconTrash :size="14" :stroke-width="1.5" />
-        </button>
+        <template v-if="deleteConfirm">
+          <button
+            type="button"
+            class="row-action-btn row-action-confirm"
+            @click="confirmDelete"
+            aria-label="Confirm removal"
+          >
+            <IconCheck :size="13" :stroke-width="2.5" />
+          </button>
+          <button
+            type="button"
+            class="row-action-btn"
+            @click="cancelDelete"
+            aria-label="Cancel removal"
+          >
+            <IconX :size="13" :stroke-width="1.5" />
+          </button>
+        </template>
+        <template v-else>
+          <button
+            type="button"
+            class="row-action-btn"
+            @click="openBaseEditor"
+            :aria-label="`Edit base color for ${color.name}`"
+          >
+            <IconEdit :size="14" :stroke-width="1.5" />
+          </button>
+          <button
+            v-if="!isFirst || store.colors.length > 1"
+            type="button"
+            class="row-action-btn row-action-danger"
+            @click="requestDelete"
+            :aria-label="`Remove ${color.name}`"
+          >
+            <IconTrash :size="14" :stroke-width="1.5" />
+          </button>
+        </template>
       </div>
     </div>
 
-    <!-- Swatches -->
-    <div class="swatches-inner">
-      <SwatchCard
-        v-for="shade in color.shades"
-        :key="shade.suffix"
-        :shade="shade"
-        :color-name="color.name"
-        :is-base="false"
-        @click="openSwatch(shade.suffix)"
+    <!-- Card: hero (mobile only) + swatches -->
+    <div class="palette-card">
+      <button
+        class="mobile-hero"
+        :style="{ background: headerBg }"
+        @click="openBaseEditor"
+        :aria-label="`Edit base color for ${color.name}`"
       />
+
+      <!-- Swatches -->
+      <div class="swatches-inner">
+        <SwatchCard
+          v-for="shade in color.shades"
+          :key="shade.suffix"
+          :shade="shade"
+          :color-name="color.name"
+          :is-base="false"
+          @click="openSwatch(shade.suffix)"
+        />
+      </div>
     </div>
   </div>
 
@@ -253,6 +305,41 @@ const headerBg = computed(() => oklchToCss(props.color.baseOklch))
   border-color: var(--danger-border);
 }
 
+.row-action-confirm {
+  color: var(--danger);
+  background: var(--danger-dim);
+  border-color: var(--danger-border);
+}
+
+.row-action-confirm:hover {
+  background: rgba(255, 80, 80, 0.16);
+}
+
+.palette-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-hero {
+  display: none;
+  width: 100%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  height: 160px;
+  transition: opacity 0.15s ease;
+}
+
+.mobile-hero:hover {
+  opacity: 0.9;
+}
+
+.mobile-hero:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
 .swatches-inner {
   background: var(--surface-raised);
   border-radius: var(--radius-lg);
@@ -261,20 +348,61 @@ const headerBg = computed(() => oklchToCss(props.color.baseOklch))
   gap: 4px;
   overflow-x: auto;
   box-shadow:
-    0 0 0 2px var(--surface),
+    0 0 0 2px var(--surface-raised),
     0 0 0 3px var(--border),
     inset 0 1px 1px rgba(255, 255, 255, 0.03);
 }
 
 @media (max-width: 768px) {
+  .palette-card {
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 0 0 2px var(--surface-raised),
+      0 0 0 3px var(--border),
+      inset 0 1px 1px rgba(255, 255, 255, 0.03);
+  }
+
+  .mobile-hero {
+    display: block;
+  }
+
+  .swatch {
+    padding: 0;
+  }
+
   .swatches-inner {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     padding: 4px;
-    gap: 3px;
+    gap: 2px;
+    overflow-x: hidden;
+    box-shadow: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .swatches-inner :deep(.swatch) {
-    min-width: 46px;
-    height: 100px;
+    min-width: 0;
+    height: 72px;
+    flex: 1 1 0;
+  }
+
+  .swatches-inner :deep(.swatch-inner) {
+    border-radius: calc(var(--radius-lg) - 4px);
+  }
+
+  .swatches-inner :deep(.swatch-label) {
+    padding: 8px 2px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .swatches-inner :deep(.swatch-name) {
+    font-size: 8px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .swatches-inner :deep(.swatch-hex) {
+    display: none;
   }
 }
 </style>

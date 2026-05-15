@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { usePaletteStore } from '@/stores/palette'
 import {
   parseToOklch,
-  randomOklch,
   oklchToCss,
   oklchToHex,
   getHarmonyColors,
@@ -12,19 +11,18 @@ import {
   type HarmonyType
 } from '@/utils/color'
 import { useFocusTrap } from '@/composables/useFocusTrap'
-import { IconX, IconRefresh } from '@tabler/icons-vue'
+import { IconX } from '@tabler/icons-vue'
+import ColorModelInput from '@/components/ColorModelInput.vue'
 
 const store = usePaletteStore()
 const emit = defineEmits<{ close: [] }>()
 
-const colorInput = ref('#3b7fd4')
+const paletteColor = ref<OklchColor | null>(parseToOklch('#3b7fd4'))
 const colorName = ref('color')
-const inputError = ref(false)
 const mode = ref<'manual' | 'harmony'>('manual')
 
-const parsedOklch = computed<OklchColor | null>(() => parseToOklch(colorInput.value))
 const previewBg = computed(() =>
-  parsedOklch.value ? oklchToCss(parsedOklch.value) : 'var(--surface-raised)'
+  paletteColor.value ? oklchToCss(paletteColor.value) : 'var(--surface-raised)'
 )
 
 const harmonyBase = computed(() => store.colors[0]?.baseOklch)
@@ -40,21 +38,9 @@ const harmonyPreviews = computed(() => {
   }))
 })
 
-function randomize() {
-  const c = randomOklch()
-  colorInput.value = oklchToHex(c)
-}
-
-function onInput(e: Event) {
-  const v = (e.target as HTMLInputElement).value
-  colorInput.value = v
-  inputError.value = !parseToOklch(v)
-}
-
 function addManual() {
-  const oklch = parsedOklch.value
-  if (!oklch || !colorName.value.trim()) return
-  store.addColor(colorName.value.trim(), oklch)
+  if (!paletteColor.value || !colorName.value.trim()) return
+  store.addColor(colorName.value.trim(), paletteColor.value)
   emit('close')
 }
 
@@ -64,7 +50,7 @@ function addHarmony() {
   emit('close')
 }
 
-const firstInputRef = ref<HTMLInputElement | null>(null)
+const colorInputRef = ref<{ focus: () => void } | null>(null)
 const dialogRef = ref<HTMLElement | null>(null)
 
 useFocusTrap(dialogRef)
@@ -74,7 +60,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  firstInputRef.value?.focus()
+  colorInputRef.value?.focus()
   document.addEventListener('keydown', onKeydown)
 })
 
@@ -98,7 +84,7 @@ function onBackdrop(e: MouseEvent) {
       >
         <div class="modal-header">
           <span id="add-color-title" class="modal-title">Add color</span>
-          <button type="button" class="btn-icon" @click="emit('close')" aria-label="Close dialog">
+          <button type="button" class="btn-icon" aria-label="Close dialog" @click="emit('close')">
             <IconX :size="16" :stroke-width="1.5" />
           </button>
         </div>
@@ -119,8 +105,8 @@ function onBackdrop(e: MouseEvent) {
             role="tab"
             :aria-selected="mode === 'harmony'"
             :class="['tab', { active: mode === 'harmony' }]"
-            @click="mode = 'harmony'"
             :disabled="!harmonyBase"
+            @click="mode = 'harmony'"
           >
             Harmony
           </button>
@@ -130,45 +116,22 @@ function onBackdrop(e: MouseEvent) {
         <template v-if="mode === 'manual'">
           <div class="preview-inner" :style="{ background: previewBg }" />
 
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">Color value</label>
-              <div class="input-with-btn">
-                <input
-                  ref="firstInputRef"
-                  class="text-input mono"
-                  :class="{ error: inputError }"
-                  :value="colorInput"
-                  @input="onInput"
-                  placeholder="#hex or oklch(...)"
-                  spellcheck="false"
-                  aria-label="Color value"
-                />
-                <button
-                  type="button"
-                  class="inline-btn"
-                  @click="randomize"
-                  aria-label="Randomize color"
-                >
-                  <IconRefresh :size="13" :stroke-width="1.5" />
-                </button>
-              </div>
-            </div>
-            <div class="field">
-              <label class="field-label">Name</label>
-              <input
-                class="text-input mono"
-                v-model="colorName"
-                placeholder="color"
-                spellcheck="false"
-              />
-            </div>
+          <ColorModelInput ref="colorInputRef" v-model="paletteColor" :show-randomize="true" />
+
+          <div class="field">
+            <label class="field-label">Name</label>
+            <input
+              class="text-input mono"
+              v-model="colorName"
+              placeholder="color"
+              spellcheck="false"
+            />
           </div>
 
           <button
             type="button"
             class="btn-primary"
-            :disabled="!parsedOklch || !colorName.trim()"
+            :disabled="!paletteColor || !colorName.trim()"
             @click="addManual"
           >
             Add to palette
@@ -298,6 +261,11 @@ function onBackdrop(e: MouseEvent) {
   color: var(--text);
 }
 
+.tab:hover:not(.active):not(:disabled) {
+  background: var(--surface-high);
+  color: var(--text);
+}
+
 .tab:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -313,13 +281,7 @@ function onBackdrop(e: MouseEvent) {
     inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
-.field-row {
-  display: flex;
-  gap: 10px;
-}
-
 .field {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -330,11 +292,6 @@ function onBackdrop(e: MouseEvent) {
   color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 0.03em;
-}
-
-.input-with-btn {
-  position: relative;
-  display: flex;
 }
 
 .text-input {
@@ -350,32 +307,6 @@ function onBackdrop(e: MouseEvent) {
 
 .text-input:focus {
   border-color: var(--border-strong);
-}
-
-.text-input.error {
-  border-color: var(--danger-border);
-}
-
-.inline-btn {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  border-radius: 5px;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease;
-}
-
-.inline-btn:hover {
-  background: var(--surface-high);
-  color: var(--text);
 }
 
 .harmony-types {
