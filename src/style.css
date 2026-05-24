@@ -82,6 +82,16 @@ button {
   border-radius: 2px;
 }
 
+/* Prevent iOS Safari/Chrome auto-zoom on input focus (requires font-size >= 16px).
+   !important needed to override scoped component styles. */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Number input: hide spinners */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
