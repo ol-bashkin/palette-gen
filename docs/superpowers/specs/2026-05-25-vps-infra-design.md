@@ -224,6 +224,10 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/palette-gen.app/privkey.pem;
     include             /etc/letsencrypt/options-ssl-nginx.conf;
 
+    add_header X-Content-Type-Options  "nosniff"                        always;
+    add_header X-Frame-Options         "DENY"                           always;
+    add_header Referrer-Policy         "strict-origin-when-cross-origin" always;
+
     location / {
         proxy_pass         http://127.0.0.1:8080;
         proxy_set_header   Host $host;
@@ -258,12 +262,48 @@ Ubuntu 24.04 includes a systemd timer for auto-renewal — no manual cron needed
 
 ---
 
-## Deploy User Setup
+## Server Hardening
+
+### Firewall (UFW)
+
+Must be configured before exposing the server. Docker bypasses UFW iptables rules for container ports — the `127.0.0.1` binding in compose is what keeps containers off the internet, not UFW.
+
+```bash
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+### SSH Hardening
+
+Disable password auth and root login in `/etc/ssh/sshd_config`:
+
+```
+PermitRootLogin no
+PasswordAuthentication no
+```
+
+```bash
+systemctl restart ssh
+```
+
+### Deploy User Setup
 
 ```bash
 adduser deploy
 usermod -aG docker deploy
 # Add public key to /home/deploy/.ssh/authorized_keys
+```
+
+**Note:** Adding `deploy` to the `docker` group is equivalent to granting root access to the Docker daemon. This is an accepted trade-off for a single-developer VPS. The SSH key used for GitHub Actions must be a dedicated key pair — never reuse a personal key.
+
+### .env File Permissions
+
+The `.env` file containing `POSTGRES_PASSWORD` (Phase 1) must be readable only by the deploy user:
+
+```bash
+chmod 600 /srv/palette-gen.app/.env
 ```
 
 ---
